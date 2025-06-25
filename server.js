@@ -1,13 +1,23 @@
 import express from 'express';
 import cors from 'cors';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { pool } from './db.js';
 import { PORT } from './config.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Servir archivos estáticos de React en producción
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, 'build')));
+}
 
 // Ruta de prueba
 app.get('/api/health', async (req, res) => {
@@ -234,13 +244,90 @@ app.get('/api/groups/:groupId/expenses', async (req, res) => {
   }
 });
 
-// Manejo de rutas no encontradas
-app.use('*', (req, res) => {
-  res.status(404).json({
-    success: false,
-    message: 'Ruta no encontrada'
-  });
+// Ruta para actualizar un gasto
+app.put('/api/expenses/:expenseId', async (req, res) => {
+  try {
+    const { expenseId } = req.params;
+    const { category_id, description, amount, expense_date } = req.body;
+    
+    if (!category_id || !description || !amount || !expense_date) {
+      return res.status(400).json({
+        success: false,
+        message: 'Todos los campos son requeridos'
+      });
+    }
+    
+    const result = await pool.query(
+      'UPDATE expenses SET category_id = $1, description = $2, amount = $3, expense_date = $4 WHERE id = $5 RETURNING *',
+      [category_id, description, amount, expense_date, expenseId]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Gasto no encontrado'
+      });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Gasto actualizado exitosamente',
+      data: result.rows[0]
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error actualizando gasto',
+      error: error.message
+    });
+  }
 });
+
+// Ruta para eliminar un gasto
+app.delete('/api/expenses/:expenseId', async (req, res) => {
+  try {
+    const { expenseId } = req.params;
+    
+    // Primero eliminar las divisiones del gasto
+    await pool.query('DELETE FROM expense_splits WHERE expense_id = $1', [expenseId]);
+    
+    // Luego eliminar el gasto
+    const result = await pool.query('DELETE FROM expenses WHERE id = $1 RETURNING *', [expenseId]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Gasto no encontrado'
+      });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Gasto eliminado exitosamente'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error eliminando gasto',
+      error: error.message
+    });
+  }
+});
+
+// En producción, servir la aplicación React para todas las rutas no API
+if (process.env.NODE_ENV === 'production') {
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'build', 'index.html'));
+  });
+} else {
+  // Manejo de rutas no encontradas en desarrollo
+  app.use('*', (req, res) => {
+    res.status(404).json({
+      success: false,
+      message: 'Ruta no encontrada'
+    });
+  });
+}
 
 // Iniciar servidor
 app.listen(PORT, () => {

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { format, startOfWeek, startOfMonth, isAfter, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale/index.js';
+import { apiService } from '../services/api.js';
 
 const AppContext = createContext();
 
@@ -21,7 +22,11 @@ const initialState = {
   groups: [],
   currentGroup: null,
   people: [],
+  categories: [],
+  users: [],
   darkMode: false,
+  loading: false,
+  error: null,
   filters: {
     category: 'all',
     dateRange: 'all',
@@ -34,10 +39,55 @@ const initialState = {
 // Reducer
 function appReducer(state, action) {
   switch (action.type) {
+    case 'SET_LOADING':
+      return {
+        ...state,
+        loading: action.payload
+      };
+    
+    case 'SET_ERROR':
+      return {
+        ...state,
+        error: action.payload,
+        loading: false
+      };
+    
     case 'LOAD_DATA':
       return {
         ...state,
-        ...action.payload
+        ...action.payload,
+        loading: false,
+        error: null
+      };
+    
+    case 'SET_CATEGORIES':
+      return {
+        ...state,
+        categories: action.payload
+      };
+    
+    case 'SET_USERS':
+      return {
+        ...state,
+        users: action.payload
+      };
+    
+    case 'SET_GROUPS':
+      return {
+        ...state,
+        groups: action.payload
+      };
+    
+    case 'SET_EXPENSES':
+      return {
+        ...state,
+        expenses: action.payload
+      };
+    
+    case 'SET_CURRENT_GROUP':
+      return {
+        ...state,
+        currentGroup: action.payload
       };
     
     case 'ADD_EXPENSE':
@@ -194,23 +244,51 @@ function appReducer(state, action) {
 export function AppProvider({ children }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
 
-  // Cargar datos del localStorage al iniciar
+  // Cargar datos iniciales desde la API
   useEffect(() => {
-    const savedData = localStorage.getItem('gastosGrupales');
-    if (savedData) {
-      try {
-        const parsedData = JSON.parse(savedData);
-        dispatch({ type: 'LOAD_DATA', payload: parsedData });
-      } catch (error) {
-        console.error('Error loading saved data:', error);
-      }
-    }
+    loadInitialData();
   }, []);
 
-  // Guardar datos en localStorage cuando cambie el estado
+  // Cargar datos desde la API
+  const loadInitialData = async () => {
+    try {
+      dispatch({ type: 'SET_LOADING', payload: true });
+      
+      // Cargar datos en paralelo
+      const [categoriesResponse, usersResponse, groupsResponse] = await Promise.all([
+        apiService.getCategories(),
+        apiService.getUsers(),
+        apiService.getGroups()
+      ]);
+      
+      dispatch({ type: 'SET_CATEGORIES', payload: categoriesResponse.data });
+      dispatch({ type: 'SET_USERS', payload: usersResponse.data });
+      dispatch({ type: 'SET_GROUPS', payload: groupsResponse.data });
+      
+      // Cargar preferencias del localStorage
+      const savedPreferences = localStorage.getItem('gastosGrupalesPreferences');
+      if (savedPreferences) {
+        const preferences = JSON.parse(savedPreferences);
+        if (preferences.darkMode !== undefined) {
+          dispatch({ type: 'TOGGLE_DARK_MODE' });
+        }
+      }
+      
+      dispatch({ type: 'SET_LOADING', payload: false });
+    } catch (error) {
+      console.error('Error loading initial data:', error);
+      dispatch({ type: 'SET_ERROR', payload: error.message });
+    }
+  };
+
+  // Guardar preferencias en localStorage
   useEffect(() => {
-    localStorage.setItem('gastosGrupales', JSON.stringify(state));
-  }, [state]);
+    const preferences = {
+      darkMode: state.darkMode,
+      filters: state.filters
+    };
+    localStorage.setItem('gastosGrupalesPreferences', JSON.stringify(preferences));
+  }, [state.darkMode, state.filters]);
 
   // Aplicar tema oscuro
   useEffect(() => {
@@ -422,9 +500,125 @@ export function AppProvider({ children }) {
     }));
   };
 
+  // Funciones API
+  const addExpense = async (expenseData) => {
+    try {
+      dispatch({ type: 'SET_LOADING', payload: true });
+      const response = await apiService.createExpense(expenseData);
+      
+      // Recargar gastos del grupo actual
+      if (state.currentGroup) {
+        const expensesResponse = await apiService.getGroupExpenses(state.currentGroup.id);
+        dispatch({ type: 'SET_EXPENSES', payload: expensesResponse.data });
+      }
+      
+      dispatch({ type: 'SET_LOADING', payload: false });
+      return response;
+    } catch (error) {
+      dispatch({ type: 'SET_ERROR', payload: error.message });
+      throw error;
+    }
+  };
+
+  const updateExpense = async (expenseId, expenseData) => {
+    try {
+      dispatch({ type: 'SET_LOADING', payload: true });
+      const response = await apiService.updateExpense(expenseId, expenseData);
+      
+      // Recargar gastos del grupo actual
+      if (state.currentGroup) {
+        const expensesResponse = await apiService.getGroupExpenses(state.currentGroup.id);
+        dispatch({ type: 'SET_EXPENSES', payload: expensesResponse.data });
+      }
+      
+      dispatch({ type: 'SET_LOADING', payload: false });
+      return response;
+    } catch (error) {
+      dispatch({ type: 'SET_ERROR', payload: error.message });
+      throw error;
+    }
+  };
+
+  const deleteExpense = async (expenseId) => {
+    try {
+      dispatch({ type: 'SET_LOADING', payload: true });
+      await apiService.deleteExpense(expenseId);
+      
+      // Recargar gastos del grupo actual
+      if (state.currentGroup) {
+        const expensesResponse = await apiService.getGroupExpenses(state.currentGroup.id);
+        dispatch({ type: 'SET_EXPENSES', payload: expensesResponse.data });
+      }
+      
+      dispatch({ type: 'SET_LOADING', payload: false });
+    } catch (error) {
+      dispatch({ type: 'SET_ERROR', payload: error.message });
+      throw error;
+    }
+  };
+
+  const createGroup = async (groupData) => {
+    try {
+      dispatch({ type: 'SET_LOADING', payload: true });
+      const response = await apiService.createGroup(groupData);
+      
+      // Recargar grupos
+      const groupsResponse = await apiService.getGroups();
+      dispatch({ type: 'SET_GROUPS', payload: groupsResponse.data });
+      
+      dispatch({ type: 'SET_LOADING', payload: false });
+      return response;
+    } catch (error) {
+      dispatch({ type: 'SET_ERROR', payload: error.message });
+      throw error;
+    }
+  };
+
+  const createUser = async (userData) => {
+    try {
+      dispatch({ type: 'SET_LOADING', payload: true });
+      const response = await apiService.createUser(userData);
+      
+      // Recargar usuarios
+      const usersResponse = await apiService.getUsers();
+      dispatch({ type: 'SET_USERS', payload: usersResponse.data });
+      
+      dispatch({ type: 'SET_LOADING', payload: false });
+      return response;
+    } catch (error) {
+      dispatch({ type: 'SET_ERROR', payload: error.message });
+      throw error;
+    }
+  };
+
+  const selectGroup = async (group) => {
+    try {
+      dispatch({ type: 'SET_CURRENT_GROUP', payload: group });
+      
+      if (group) {
+        dispatch({ type: 'SET_LOADING', payload: true });
+        const expensesResponse = await apiService.getGroupExpenses(group.id);
+        dispatch({ type: 'SET_EXPENSES', payload: expensesResponse.data });
+        dispatch({ type: 'SET_LOADING', payload: false });
+      } else {
+        dispatch({ type: 'SET_EXPENSES', payload: [] });
+      }
+    } catch (error) {
+      dispatch({ type: 'SET_ERROR', payload: error.message });
+    }
+  };
+
   const value = {
     state,
     dispatch,
+    // API functions
+    addExpense,
+    updateExpense,
+    deleteExpense,
+    createGroup,
+    createUser,
+    selectGroup,
+    loadInitialData,
     getFilteredExpenses,
     getTotalsByPeriod,
     getCategoryTotals,

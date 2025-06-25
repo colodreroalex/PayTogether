@@ -1,4 +1,4 @@
-export const PORT = process.env.PORT || 3000;
+export const PORT = process.env.PORT || 3001;
 
 export const DB_HOST = process.env.DB_HOST || 'dpg-d1e79sndiees73819isg-a.oregon-postgres.render.com';
 export const DB_USER = process.env.DB_USER || 'paytogether_db_user';
