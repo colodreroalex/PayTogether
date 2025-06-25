@@ -1,7 +1,7 @@
 import React from 'react';
-import { useApp } from '../context/AppContext';
+import { useApp } from '../context/AppContext.js';
 import { format, parseISO } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { es } from 'date-fns/locale/index.js';
 
 function DeleteConfirmModal({ expense, onConfirm, onCancel }) {
   const { CATEGORIES } = useApp();

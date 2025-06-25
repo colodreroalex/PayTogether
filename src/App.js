@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
-import { AppProvider } from './context/AppContext';
-import Header from './components/Header';
-import Dashboard from './components/Dashboard';
-import ExpenseList from './components/ExpenseList';
-import Statistics from './components/Statistics';
-import GroupManager from './components/GroupManager';
-import GroupBalances from './components/GroupBalances';
-import AddExpenseModal from './components/AddExpenseModal';
-import FloatingActionButton from './components/FloatingActionButton';
-import BottomNavigation from './components/BottomNavigation';
+import { AppProvider } from './context/AppContext.js';
+import Header from './components/Header.js';
+import Dashboard from './components/Dashboard.js';
+import ExpenseList from './components/ExpenseList.js';
+import Statistics from './components/Statistics.js';
+import GroupManager from './components/GroupManager.js';
+import GroupBalances from './components/GroupBalances.js';
+import AddExpenseModal from './components/AddExpenseModal.js';
+import FloatingActionButton from './components/FloatingActionButton.js';
+import BottomNavigation from './components/BottomNavigation.js';
 
 function App() {
   const [currentView, setCurrentView] = useState('dashboard');

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { useApp } from '../context/AppContext';
-import AddExpenseModal from './AddExpenseModal';
-import CreateGroupModal from './CreateGroupModal';
+import { useApp } from '../context/AppContext.js';
+import AddExpenseModal from './AddExpenseModal.js';
+import CreateGroupModal from './CreateGroupModal.js';
 
 function QuickActions() {
   const { state, exportToCSV } = useApp();

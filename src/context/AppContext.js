@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { format, startOfWeek, startOfMonth, isAfter, parseISO } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { es } from 'date-fns/locale/index.js';
 
 const AppContext = createContext();
 

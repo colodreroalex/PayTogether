@@ -1,9 +1,9 @@
 import React from 'react';
-import { useApp } from '../context/AppContext';
-import QuickStats from './QuickStats';
-import RecentExpenses from './RecentExpenses';
-import CategoryChart from './CategoryChart';
-import QuickActions from './QuickActions';
+import { useApp } from '../context/AppContext.js';
+import QuickStats from './QuickStats.js';
+import RecentExpenses from './RecentExpenses.js';
+import CategoryChart from './CategoryChart.js';
+import QuickActions from './QuickActions.js';
 
 function Dashboard() {
   const { state, getTotalsByPeriod, getAverageDailyExpense, getMostExpensiveCategory } = useApp();

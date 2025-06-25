@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { useApp } from '../context/AppContext';
+import { useApp } from '../context/AppContext.js';
 import {
   Chart as ChartJS,
   ArcElement,

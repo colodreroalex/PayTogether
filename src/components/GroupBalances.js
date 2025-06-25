@@ -1,5 +1,5 @@
 import React from 'react';
-import { useApp } from '../context/AppContext';
+import { useApp } from '../context/AppContext.js';
 
 function GroupBalances() {
   const { state, calculateBalances, calculateDebts, getCurrentGroupExpenses, getCurrentGroupMembers } = useApp();

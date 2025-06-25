@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { useApp } from '../context/AppContext';
-import CategoryChart from './CategoryChart';
-import ExpenseTrendChart from './ExpenseTrendChart';
-import MonthlyComparisonChart from './MonthlyComparisonChart';
+import { useApp } from '../context/AppContext.js';
+import CategoryChart from './CategoryChart.js';
+import ExpenseTrendChart from './ExpenseTrendChart.js';
+import MonthlyComparisonChart from './MonthlyComparisonChart.js';
 import { parseISO, startOfWeek, startOfMonth, endOfWeek, endOfMonth, subWeeks, subMonths } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { es } from 'date-fns/locale/index.js';
 
 function Statistics() {
   const { state, CATEGORIES } = useApp();
